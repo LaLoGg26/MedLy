@@ -1,0 +1,12 @@
+0 verbose cli C:\nvm4w\nodejs\node.exe D:\npm-global\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.8.0
+2 info using node@v22.20.0
+3 silly config load:file:D:\npm-global\node_modules\npm\npmrc
+4 warn Unknown cli config "--Y". This will stop working in the next major version of npm.
+5 silly config load:file:D:\Proyectos\MedLy\.npmrc
+6 silly config load:file:C:\Users\aryed\.npmrc
+7 silly config load:file:D:\npm-global\etc\npmrc
+8 verbose title npm init
+9 verbose argv "init" "-Y"
+10 verbose logfile logs-max:10 dir:D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-02T22_37_21_088Z-
+11 verbose logfile D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-02T22_37_21_088Z-debug-0.log
