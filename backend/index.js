@@ -2,7 +2,9 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import "./config/db.js"; // Importamos para que se ejecute la prueba de conexión
+import "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
+import pacienteRoutes from "./routes/pacienteRoutes.js";
 
 dotenv.config();
 
@@ -12,6 +14,9 @@ const PORT = process.env.PORT || 3000;
 // Middlewares globales
 app.use(cors());
 app.use(express.json()); // Permite al servidor entender JSON en el body de las peticiones
+
+app.use("/api/auth", authRoutes);
+app.use("/api/pacientes", pacienteRoutes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {
