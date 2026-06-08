@@ -5,9 +5,15 @@
 4 silly config load:file:D:\Proyectos\MedLy\backend\.npmrc
 5 silly config load:file:C:\Users\aryed\.npmrc
 6 silly config load:file:D:\npm-global\etc\npmrc
-7 verbose title npm run dev
-8 verbose argv "run" "dev"
-9 verbose logfile logs-max:10 dir:D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-03T05_49_27_485Z-
-10 verbose logfile D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-03T05_49_27_485Z-debug-0.log
+7 verbose title npm run
+8 verbose argv "run"
+9 verbose logfile logs-max:10 dir:D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-04T21_15_21_740Z-
+10 verbose logfile D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-04T21_15_21_740Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files
+13 verbose cwd D:\Proyectos\MedLy\backend
+14 verbose os Windows_NT 10.0.26200
+15 verbose node v22.20.0
+16 verbose npm  v11.8.0
+17 verbose exit 0
+18 info ok

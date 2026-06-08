@@ -82,34 +82,60 @@ export const login = async (req, res) => {
       return res.status(401).json({ mensaje: "Credenciales inválidas." });
     }
 
+    // --- AQUÍ DEFINIMOS AL USUARIO ---
     const usuario = users[0];
 
-    // 3. Verificar si el usuario está activo (por si lo banearon en el futuro)
+    // 3. NUEVA VALIDACIÓN: Revisar si ya verificó su correo
+    // (Ahora sí funciona porque 'usuario' ya existe en la línea anterior)
+    if (!usuario.verificado) {
+      return res.status(403).json({
+        mensaje:
+          "Debes verificar tu correo electrónico antes de iniciar sesión.",
+        requiere_verificacion: true,
+      });
+    }
+
+    // 4. Verificar si el usuario está activo (por si lo banearon en el futuro)
     if (!usuario.activo) {
       return res
         .status(403)
         .json({ mensaje: "Esta cuenta ha sido desactivada." });
     }
 
-    // 4. Comparar la contraseña enviada con la encriptada en la BD
+    // 5. Comparar la contraseña enviada con la encriptada en la BD
     const passwordValida = await bcrypt.compare(contrasena, usuario.contrasena);
 
     if (!passwordValida) {
       return res.status(401).json({ mensaje: "Credenciales inválidas." });
     }
 
-    // 5. Generar el Token JWT
-    // Usamos el secreto que guardamos en tu archivo .env
+    // 6. Generar el Token JWT
     const token = jwt.sign(
       { id_usuario: usuario.id_usuario, rol: usuario.rol },
       process.env.JWT_SECRET,
-      { expiresIn: "8h" }, // El token caduca en 8 horas por seguridad
+      { expiresIn: "8h" },
     );
 
-    // 6. Respuesta exitosa (Nunca devolvemos la contraseña al frontend)
+    // 7. Verificar si el paciente ya completó su perfil
+    let perfilCompletado = true; // Por defecto asumimos que sí (útil para admins y doctores)
+
+    if (usuario.rol === 3) {
+      // Solo verificamos esto si es un paciente
+      const [paciente] = await pool.query(
+        "SELECT id_paciente FROM pacientes WHERE id_usuario = ?",
+        [usuario.id_usuario],
+      );
+
+      if (paciente.length === 0) {
+        perfilCompletado = false; // No encontramos su expediente, le falta llenarlo
+      }
+    }
+
+    // 8. Respuesta exitosa
     res.status(200).json({
       mensaje: "Inicio de sesión exitoso",
       token,
+      perfil_completado: perfilCompletado,
       usuario: {
         id_usuario: usuario.id_usuario,
         correo: usuario.correo,
@@ -119,20 +145,6 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("Error en el login:", error);
     res.status(500).json({ mensaje: "Error interno del servidor" });
-  }
-
-  if (!usuario.verificado) {
-    return res.status(403).json({
-      mensaje: "Debes verificar tu correo electrónico antes de iniciar sesión.",
-      requiere_verificacion: true,
-    });
-  }
-
-  // 3. Verificar si el usuario está activo (por si lo banearon en el futuro)
-  if (!usuario.activo) {
-    return res
-      .status(403)
-      .json({ mensaje: "Esta cuenta ha sido desactivada." });
   }
 };
 
@@ -169,14 +181,29 @@ export const verificarCodigo = async (req, res) => {
         .json({ mensaje: "Código de verificación incorrecto." });
     }
 
-    // Si el código es correcto, actualizamos la base de datos
+    // 1. Actualizamos la base de datos a verificado
     await pool.query(
       "UPDATE usuarios SET verificado = TRUE, codigo_verificacion = NULL WHERE id_usuario = ?",
       [usuario.id_usuario],
     );
 
+    // 2. NUEVO: Generamos el Token para el auto-login
+    // Importante: Asegúrate de tener importado 'jwt' arriba en este archivo
+    const token = jwt.sign(
+      { id_usuario: usuario.id_usuario, rol: usuario.rol },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" },
+    );
+
+    // 3. Devolvemos la respuesta exitosa con el token
     res.status(200).json({
-      mensaje: "Cuenta verificada exitosamente. Ya puedes iniciar sesión.",
+      mensaje: "Cuenta verificada exitosamente.",
+      token,
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        correo: usuario.correo,
+        rol: usuario.rol,
+      },
     });
   } catch (error) {
     console.error("Error al verificar código:", error);

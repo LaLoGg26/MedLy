@@ -1,5 +1,5 @@
 // frontend/src/pages/Login.jsx
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Box,
   Card,
@@ -10,9 +10,11 @@ import {
   Link,
   InputAdornment,
   IconButton,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import ReCAPTCHA from "react-google-recaptcha"; // Importamos el CAPTCHA
+import ReCAPTCHA from "react-google-recaptcha";
+import clienteAxios from "../api/axios"; // NUEVO: Importamos Axios
 
 // Íconos
 import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
@@ -23,38 +25,67 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 const Login = () => {
   const navigate = useNavigate();
-  const captchaRef = useRef(null); // Referencia para manejar el CAPTCHA
+  // const captchaRef = useRef(null); // Descomenta si vas a usar el CAPTCHA activo
 
   const [credenciales, setCredenciales] = useState({
     correo: "",
     contrasena: "",
   });
   const [mostrarPassword, setMostrarPassword] = useState(false);
-  const [captchaValido, setCaptchaValido] = useState(false); // Estado para habilitar el botón
+  const [error, setError] = useState(""); // Estado para errores
+  const [cargando, setCargando] = useState(false);
+
+  // Por ahora dejamos el captcha como válido siempre para facilitar pruebas
+  // Cuando lo actives, cámbialo a false
+  const [captchaValido, setCaptchaValido] = useState(true);
 
   const handleChange = (e) => {
     setCredenciales({ ...credenciales, [e.target.name]: e.target.value });
+    setError(""); // Limpia el error al escribir
   };
 
   const handleCaptchaChange = (token) => {
-    // Si token existe, el usuario pasó la prueba
-    if (token) {
-      setCaptchaValido(true);
-    } else {
-      // Si el token expira o falla
-      setCaptchaValido(false);
-    }
+    if (token) setCaptchaValido(true);
+    else setCaptchaValido(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Obtenemos el token generado por Google para enviarlo al backend (más adelante)
-    //const captchaToken = captchaRef.current.getValue();
+    try {
+      setCargando(true);
+      const respuesta = await clienteAxios.post("/auth/login", credenciales);
 
-    console.log("Intentando iniciar sesión con:", credenciales);
-    //console.log("Token de CAPTCHA:", captchaToken);
-    navigate("/dashboard");
+      localStorage.setItem("token", respuesta.data.token);
+
+      // FORZAMOS LA CONVERSIÓN A NÚMERO
+      const rol = Number(respuesta.data.usuario.rol);
+      const perfilCompletado = respuesta.data.perfil_completado;
+
+      if (rol === 1) {
+        navigate("/admin");
+      } else if (rol === 2) {
+        navigate("/doctor");
+      } else {
+        if (!perfilCompletado) {
+          navigate("/completar-perfil");
+        } else {
+          navigate("/dashboard");
+        }
+      }
+    } catch (error) {
+      console.error("Error en login:", error);
+
+      if (error.response?.data?.requiere_verificacion) {
+        navigate("/verificar", { state: { correo: credenciales.correo } });
+      } else {
+        setError(
+          error.response?.data?.mensaje || "Error al conectar con el servidor.",
+        );
+      }
+    } finally {
+      setCargando(false);
+    }
   };
 
   const handleClickShowPassword = () => setMostrarPassword((show) => !show);
@@ -72,7 +103,6 @@ const Login = () => {
     >
       <Card sx={{ maxWidth: 420, width: "100%", p: { xs: 2, sm: 4 } }}>
         <CardContent sx={{ p: 0 }}>
-          {/* LOGO Y TÍTULO */}
           <Box
             sx={{
               display: "flex",
@@ -107,7 +137,13 @@ const Login = () => {
             </Typography>
           </Box>
 
-          {/* FORMULARIO */}
+          {/* NUEVO: Alerta de Error */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
@@ -167,15 +203,13 @@ const Login = () => {
               </Link>
             </Box>
 
-            {/* CONTENEDOR DEL CAPTCHA */}
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
+            {/* <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
               <ReCAPTCHA
                 ref={captchaRef}
-                // Clave de prueba oficial de Google (siempre aprueba para desarrollo)
-                sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" 
                 onChange={handleCaptchaChange}
               />
-            </Box>
+            </Box> */}
 
             <Button
               fullWidth
@@ -183,13 +217,12 @@ const Login = () => {
               variant="contained"
               color="primary"
               size="large"
-              disabled={!captchaValido} // Se bloquea si no hay CAPTCHA
+              disabled={!captchaValido || cargando}
             >
-              Iniciar Sesión
+              {cargando ? "Iniciando..." : "Iniciar Sesión"}
             </Button>
           </form>
 
-          {/* FOOTER */}
           <Box sx={{ mt: 4, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
               ¿No tienes una cuenta?{" "}

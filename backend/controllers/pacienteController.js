@@ -15,6 +15,7 @@ export const obtenerPacientes = async (req, res) => {
 // Crear un nuevo paciente
 export const crearPaciente = async (req, res) => {
   try {
+    // Aseguramos capturar 'estado' y 'cp' (como lo manda el frontend)
     const {
       id_usuario,
       nombres,
@@ -26,20 +27,19 @@ export const crearPaciente = async (req, res) => {
       telefono,
       calle,
       colonia,
-      codigo_postal,
+      cp,
       ciudad,
+      estado,
     } = req.body;
 
-    // Validación rápida de campos esenciales
     if (!id_usuario || !nombres || !apellido_paterno || !curp) {
       return res.status(400).json({ mensaje: "Faltan datos obligatorios." });
     }
 
-    // Insertar en la base de datos
     const [result] = await pool.query(
       `INSERT INTO pacientes 
-            (id_usuario, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, sexo, curp, telefono, calle, colonia, codigo_postal, ciudad) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (id_usuario, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, sexo, curp, telefono, calle, colonia, codigo_postal, ciudad, estado) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id_usuario,
         nombres,
@@ -51,22 +51,29 @@ export const crearPaciente = async (req, res) => {
         telefono,
         calle,
         colonia,
-        codigo_postal,
+        cp,
         ciudad,
+        estado,
       ],
+    );
+
+    const idGenerado = `PAC-${result.insertId.toString().padStart(5, "0")}`;
+
+    await pool.query(
+      "UPDATE pacientes SET id_paciente_visible = ? WHERE id_paciente = ?",
+      [idGenerado, result.insertId],
     );
 
     res.status(201).json({
       mensaje: "Expediente de paciente creado exitosamente",
-      id_paciente: result.insertId,
+      id_paciente: idGenerado,
     });
   } catch (error) {
     console.error("Error al crear paciente:", error);
-    // Manejo de error si la CURP ya existe
     if (error.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({ mensaje: "La CURP ya está registrada en el sistema." });
+      return res.status(409).json({
+        mensaje: "La CURP o el usuario ya están registrados en el sistema.",
+      });
     }
     res.status(500).json({ mensaje: "Error interno del servidor" });
   }
@@ -123,11 +130,9 @@ export const actualizarPaciente = async (req, res) => {
     console.error("Error al actualizar paciente:", error);
     // Manejo de error si intentan poner una CURP que ya le pertenece a otro
     if (error.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({
-          mensaje: "La CURP ingresada ya está registrada en otro expediente.",
-        });
+      return res.status(409).json({
+        mensaje: "La CURP ingresada ya está registrada en otro expediente.",
+      });
     }
     res.status(500).json({ mensaje: "Error interno del servidor" });
   }
@@ -153,5 +158,40 @@ export const eliminarPaciente = async (req, res) => {
   } catch (error) {
     console.error("Error al eliminar paciente:", error);
     res.status(500).json({ mensaje: "Error interno del servidor" });
+  }
+};
+
+export const obtenerPerfilPaciente = async (req, res) => {
+  try {
+    // Hacemos un console.log rápido para ver qué trae tu token realmente
+    console.log("Datos del token:", req.usuario);
+
+    // Atrapamos la variable, ya sea que la hayas llamado id_usuario o id en el login
+    const idUsuarioLogueado = req.usuario.id_usuario || req.usuario.id;
+
+    if (!idUsuarioLogueado) {
+      return res
+        .status(400)
+        .json({ mensaje: "El token no contiene un ID válido" });
+    }
+
+    const [rows] = await pool.query(
+      // Asegúrate de tener importado 'pool' arriba
+      "SELECT nombres, apellido_paterno FROM pacientes WHERE id_usuario = ?",
+      [idUsuarioLogueado],
+    );
+
+    if (rows.length === 0) {
+      return res
+        .status(404)
+        .json({ mensaje: "Perfil de paciente no encontrado." });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error al obtener el perfil del paciente:", error);
+    res
+      .status(500)
+      .json({ mensaje: "Error interno del servidor al cargar el perfil." });
   }
 };

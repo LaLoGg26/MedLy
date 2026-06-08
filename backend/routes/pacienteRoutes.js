@@ -5,7 +5,9 @@ import {
   crearPaciente,
   actualizarPaciente,
   eliminarPaciente,
+  obtenerPerfilPaciente,
 } from "../controllers/pacienteController.js";
+
 import { verificarToken } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -13,8 +15,9 @@ const router = express.Router();
 // Todas estas rutas pasan primero por verificarToken
 router.get("/", verificarToken, obtenerPacientes);
 router.post("/", verificarToken, crearPaciente);
-
 router.put("/:id", verificarToken, actualizarPaciente);
 router.delete("/:id", verificarToken, eliminarPaciente);
+
+router.get("/perfil", verificarToken, obtenerPerfilPaciente);
 
 export default router;

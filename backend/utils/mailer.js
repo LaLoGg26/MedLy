@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
+export const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
@@ -37,5 +37,43 @@ export const enviarCorreoVerificacion = async (correoDestino, codigo) => {
   } catch (error) {
     console.error("Error al enviar el correo:", error);
     throw new Error("No se pudo enviar el correo de verificación");
+  }
+};
+
+export const enviarCredencialesDoctor = async (
+  correoPersonal,
+  correoInstitucional,
+  passwordTemporal,
+  nombreDoctor,
+) => {
+  try {
+    const mailOptions = {
+      from: `"Administración MedLy" <${process.env.EMAIL_USER}>`,
+      to: correoPersonal,
+      subject: "¡Bienvenido al Equipo Médico de MedLy! 🏥",
+      html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #2D3748; border-radius: 12px; background-color: #F8FAFC;">
+                    <h2 style="color: #2D3748; text-align: center;">Bienvenido(a), Dr(a). ${nombreDoctor}</h2>
+                    <p style="color: #4A5568; font-size: 16px;">Nos complace informarte que tu perfil profesional ha sido dado de alta exitosamente en la plataforma MedLy.</p>
+                    <p style="color: #4A5568; font-size: 16px;">A continuación, te proporcionamos tus credenciales de acceso oficiales:</p>
+                    
+                    <div style="background-color: #FFFFFF; border-left: 4px solid #BE84C7; padding: 15px; margin: 20px 0; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <p style="margin: 5px 0;"><strong>Correo Institucional:</strong> <span style="color: #2B6CB0;">${correoInstitucional}</span></p>
+                        <p style="margin: 5px 0;"><strong>Contraseña (ID Médico):</strong> <span style="color: #E53E3E; letter-spacing: 1px;">${passwordTemporal}</span></p>
+                    </div>
+
+                    <p style="color: #718096; font-size: 14px; text-align: center; margin-top: 30px;">
+                        Por seguridad, te recomendamos cambiar tu contraseña una vez que inicies sesión por primera vez.<br>
+                        Este es un mensaje automático generado por el panel de administración de MedLy.
+                    </p>
+                </div>
+            `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Credenciales enviadas al correo personal: ${correoPersonal}`);
+  } catch (error) {
+    console.error("Error al enviar correo al doctor:", error);
+    throw new Error("No se pudo enviar el correo con las credenciales");
   }
 };

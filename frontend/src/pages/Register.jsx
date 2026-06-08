@@ -67,7 +67,7 @@ const Register = () => {
       });
 
       console.log("Registro exitoso:", respuesta.data);
-      navigate("/login");
+      navigate("/verificar", { state: { correo: datos.correo } });
     } catch (error) {
       console.error("Error en registro:", error);
       setError(

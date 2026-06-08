@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import pacienteRoutes from "./routes/pacienteRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
+import doctorRoutes from "./routes/doctorRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.use(express.json()); // Permite al servidor entender JSON en el body de las 
 
 app.use("/api/auth", authRoutes);
 app.use("/api/pacientes", pacienteRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/doctores", doctorRoutes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {
