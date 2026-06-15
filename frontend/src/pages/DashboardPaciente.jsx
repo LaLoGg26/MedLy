@@ -32,6 +32,7 @@ const DashboardPaciente = () => {
   // Estado para el nombre, inicializado de forma personalizada para la vista previa
   const [nombrePaciente, setNombrePaciente] = useState("");
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
+  const [proximaCita, setProximaCita] = useState(null);
 
   // Obtenemos la fecha actual
   const fechaHoy = new Date().toLocaleDateString("es-MX", {
@@ -46,7 +47,22 @@ const DashboardPaciente = () => {
     const obtenerPerfil = async () => {
       try {
         const token = localStorage.getItem("token");
-        if (!token) return; // Si no hay token guardado, cancelamos
+        if (!token) return;
+
+        const resPerfil = await clienteAxios.get("/pacientes/perfil");
+        if (resPerfil.data && resPerfil.data.nombres) {
+          setNombrePaciente(resPerfil.data.nombres.split(" ")[0]);
+        }
+
+        // NUEVO: Pedir las citas del paciente
+        const resCitas = await clienteAxios.get("/citas/paciente");
+        const citas = resCitas.data.data;
+
+        // Filtrar la primera cita que esté "programada" (como viene ordenada ASC desde MySQL, la primera es la más próxima)
+        const citaPendiente = citas.find((c) => c.estado === "programada");
+        if (citaPendiente) {
+          setProximaCita(citaPendiente);
+        }
 
         // Configuramos los headers explícitamente
         const config = {
@@ -191,14 +207,75 @@ const DashboardPaciente = () => {
               <CalendarMonthOutlinedIcon fontSize="small" /> MI PRÓXIMA CITA
             </Typography>
           </Box>
-          <CardContent sx={{ p: 4, textAlign: "center" }}>
-            <Typography variant="h6" color="text.secondary" mb={1}>
-              No tienes citas programadas próximamente.
-            </Typography>
-            <Typography variant="body2" color="text.disabled">
-              Agenda una consulta general para ser atendido por uno de nuestros
-              especialistas.
-            </Typography>
+          <CardContent
+            sx={{
+              p: proximaCita ? 3 : 4,
+              textAlign: proximaCita ? "left" : "center",
+            }}
+          >
+            {/* RENDERIZADO DINÁMICO CONDICIONAL */}
+            {cargandoPerfil ? (
+              <Skeleton variant="rectangular" height={60} />
+            ) : proximaCita ? (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 2,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h5"
+                    color="primary.main"
+                    fontWeight="bold"
+                  >
+                    {new Date(
+                      `${proximaCita.fecha.split("T")[0]}T00:00:00`,
+                    ).toLocaleDateString("es-MX", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </Typography>
+                  <Typography variant="h6" color="text.primary">
+                    {proximaCita.hora.substring(0, 5)} hrs - Consulta General
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    <strong>Médico Asignado:</strong> Dr(a).{" "}
+                    {proximaCita.doctor_nombre} {proximaCita.doctor_apellido}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    bgcolor: "#E8F5E9",
+                    color: "#2E7D32",
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    fontWeight: "bold",
+                  }}
+                >
+                  Confirmada
+                </Box>
+              </Box>
+            ) : (
+              <>
+                <Typography variant="h6" color="text.secondary" mb={1}>
+                  No tienes citas programadas próximamente.
+                </Typography>
+                <Typography variant="body2" color="text.disabled">
+                  Agenda una consulta general para ser atendido por uno de
+                  nuestros especialistas.
+                </Typography>
+              </>
+            )}
           </CardContent>
         </Card>
 

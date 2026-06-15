@@ -5,6 +5,10 @@ import {
   obtenerPerfilDoctor,
   enviarCodigoPassword,
   actualizarPasswordPrimero,
+  obtenerCitasProgramadas,
+  obtenerDirectorioPacientes,
+  obtenerExpedienteBase,
+  guardarExpedienteBase,
 } from "../controllers/doctorController.js";
 
 const router = express.Router();
@@ -16,5 +20,9 @@ router.post(
   verificarToken,
   actualizarPasswordPrimero,
 );
+router.get("/citas-programadas", verificarToken, obtenerCitasProgramadas);
+router.get("/pacientes", verificarToken, obtenerDirectorioPacientes);
+router.get("/expediente/:id_paciente", verificarToken, obtenerExpedienteBase);
+router.post("/expediente", verificarToken, guardarExpedienteBase);
 
 export default router;

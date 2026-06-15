@@ -1,7 +1,7 @@
 // backend/controllers/doctorController.js
 import bcrypt from "bcrypt";
 import pool from "../config/db.js";
-import { transporter } from "../utils/mailer.js"; // Ajusta la ruta si tu mailer está en otra parte
+import { transporter } from "../utils/mailer.js";
 
 // 1. Obtener el perfil del doctor conectado y validar si está en su horario laboral
 export const obtenerPerfilDoctor = async (req, res) => {
@@ -159,5 +159,148 @@ export const actualizarPasswordPrimero = async (req, res) => {
     res
       .status(500)
       .json({ mensaje: "Error interno al actualizar la contraseña." });
+  }
+};
+
+export const obtenerCitasProgramadas = async (req, res) => {
+  try {
+    const idUsuarioLogueado = req.usuario.id_usuario || req.usuario.id;
+
+    // Hacemos un JOIN desde doctores para obtener su id_doctor interno,
+    // y cruzamos con citas y pacientes para traer los datos completos.
+    const [citas] = await pool.query(
+      `SELECT 
+          c.id_cita,
+          c.id_paciente,
+          DATE_FORMAT(c.fecha, '%Y-%m-%d') AS fecha, 
+          c.hora, 
+          c.estado,
+          p.nombres, 
+          p.apellido_paterno, 
+          p.apellido_materno, 
+          p.telefono
+       FROM citas c
+       INNER JOIN doctores d ON c.id_doctor = d.id_doctor
+       INNER JOIN pacientes p ON c.id_paciente = p.id_paciente
+       WHERE d.id_usuario = ? AND c.estado = 'programada'
+       ORDER BY c.fecha ASC, c.hora ASC`,
+      [idUsuarioLogueado],
+    );
+
+    res.status(200).json(citas);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ mensaje: "Error al obtener las citas programadas." });
+  }
+};
+
+export const obtenerDirectorioPacientes = async (req, res) => {
+  try {
+    const idUsuarioLogueado = req.usuario.id_usuario || req.usuario.id;
+
+    const [pacientes] = await pool.query(
+      `SELECT DISTINCT
+          p.id_paciente, 
+          p.id_paciente_visible, 
+          p.nombres, 
+          p.apellido_paterno, 
+          p.apellido_materno, 
+          p.fecha_nacimiento, 
+          p.sexo, 
+          p.telefono, 
+          u.correo
+       FROM pacientes p
+       INNER JOIN usuarios u ON p.id_usuario = u.id_usuario
+       INNER JOIN citas c ON p.id_paciente = c.id_paciente
+       INNER JOIN doctores d ON c.id_doctor = d.id_doctor
+       WHERE u.activo = TRUE 
+         AND d.id_usuario = ?
+       ORDER BY p.nombres ASC`,
+      [idUsuarioLogueado],
+    );
+
+    res.status(200).json(pacientes);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ mensaje: "Error al cargar el directorio de pacientes." });
+  }
+};
+
+export const obtenerExpedienteBase = async (req, res) => {
+  try {
+    const { id_paciente } = req.params;
+
+    const [expediente] = await pool.query(
+      `SELECT * FROM expedientes_clinicos WHERE id_paciente = ?`,
+      [id_paciente],
+    );
+
+    // Si no hay expediente, devolvemos un flag para que React sepa que es primera cita
+    if (expediente.length === 0) {
+      return res.status(200).json({
+        existe: false,
+        mensaje:
+          "El paciente no cuenta con expediente base. Es su primera cita.",
+      });
+    }
+
+    // Si existe, devolvemos los datos para que el doctor los vea o los edite
+    res.status(200).json({
+      existe: true,
+      datos: expediente[0],
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: "Error al consultar el expediente base." });
+  }
+};
+
+export const guardarExpedienteBase = async (req, res) => {
+  try {
+    const {
+      id_paciente,
+      tipo_sangre,
+      alergias,
+      antecedentes_heredofamiliares,
+      enfermedades_cronicas,
+      antecedentes_quirurgicos,
+      habitos_toxicomania,
+    } = req.body;
+
+    const query = `
+      INSERT INTO expedientes_clinicos 
+      (id_paciente, tipo_sangre, alergias, antecedentes_heredofamiliares, enfermedades_cronicas, antecedentes_quirurgicos, habitos_toxicomania) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+      tipo_sangre = VALUES(tipo_sangre),
+      alergias = VALUES(alergias),
+      antecedentes_heredofamiliares = VALUES(antecedentes_heredofamiliares),
+      enfermedades_cronicas = VALUES(enfermedades_cronicas),
+      antecedentes_quirurgicos = VALUES(antecedentes_quirurgicos),
+      habitos_toxicomania = VALUES(habitos_toxicomania)
+    `;
+
+    await pool.query(query, [
+      id_paciente,
+      tipo_sangre,
+      alergias,
+      antecedentes_heredofamiliares,
+      enfermedades_cronicas,
+      antecedentes_quirurgicos,
+      habitos_toxicomania,
+    ]);
+
+    res.status(200).json({
+      mensaje: "Expediente base guardado y sincronizado correctamente.",
+    });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ mensaje: "Error al guardar el expediente base del paciente." });
   }
 };

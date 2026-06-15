@@ -7,7 +7,7 @@
 6 silly config load:file:D:\npm-global\etc\npmrc
 7 verbose title npm run dev
 8 verbose argv "run" "dev"
-9 verbose logfile logs-max:10 dir:D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-07T16_00_01_515Z-
-10 verbose logfile D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-07T16_00_01_515Z-debug-0.log
+9 verbose logfile logs-max:10 dir:D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-14T18_18_15_510Z-
+10 verbose logfile D:\Proyectos\MedLy\backend\npm-cache\_logs\2026-06-14T18_18_15_510Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files

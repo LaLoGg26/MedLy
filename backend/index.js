@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import pacienteRoutes from "./routes/pacienteRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
+import citaRoutes from "./routes/citaRoutes.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/pacientes", pacienteRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/doctores", doctorRoutes);
+app.use("/api/citas", citaRoutes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {

@@ -77,3 +77,44 @@ export const enviarCredencialesDoctor = async (
     throw new Error("No se pudo enviar el correo con las credenciales");
   }
 };
+
+// Añadir al final de backend/utils/mailer.js
+
+export const enviarCorreoConfirmacionCita = async (
+  correoDestino,
+  nombrePaciente,
+  nombreDoctor,
+  fecha,
+  hora,
+) => {
+  try {
+    const mailOptions = {
+      from: `"Equipo MedLy" <${process.env.EMAIL_USER}>`,
+      to: correoDestino,
+      subject: "Confirmación de tu Cita Médica 🏥",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #E0F7F7; border-radius: 12px; background-color: #FFFFFF;">
+            <h2 style="color: #BE84C7; text-align: center;">¡Cita Confirmada!</h2>
+            <p style="color: #2D3748; font-size: 16px;">Hola <strong>${nombrePaciente}</strong>,</p>
+            <p style="color: #2D3748; font-size: 16px;">Tu consulta general ha sido agendada exitosamente mediante nuestro motor inteligente. Aquí tienes los detalles:</p>
+            
+            <div style="background-color: #FAFBFC; border-left: 4px solid #BE84C7; padding: 15px; margin: 20px 0; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <p style="margin: 5px 0; color: #2D3748;"><strong>📅 Fecha:</strong> ${fecha}</p>
+                <p style="margin: 5px 0; color: #2D3748;"><strong>⏰ Hora:</strong> ${hora} hrs</p>
+                <p style="margin: 5px 0; color: #2D3748;"><strong>👨‍⚕️ Médico Asignado:</strong> Dr(a). ${nombreDoctor}</p>
+            </div>
+
+            <p style="color: #718096; font-size: 14px; text-align: center; margin-top: 30px;">
+                Te sugerimos llegar 15 minutos antes de la hora indicada.<br>
+                Las cancelaciones solo se realizan mediante la recepción de la clínica.
+            </p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Correo de confirmación de cita enviado a ${correoDestino}`);
+  } catch (error) {
+    console.error("Error al enviar el correo de confirmación de cita:", error);
+  }
+};

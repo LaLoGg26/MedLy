@@ -56,9 +56,11 @@ export const registrarDoctor = async (req, res) => {
       }
     }
 
-    // 1. El correo institucional se guarda ÚNICAMENTE en la tabla usuarios
+    // -------------------------------------------------------------------------
+    // CAMBIO APLICADO AQUÍ: Agregamos debe_cambiar_password = TRUE
+    // -------------------------------------------------------------------------
     const [userResult] = await connection.query(
-      `INSERT INTO usuarios (correo, contrasena, rol, verificado, activo) VALUES (?, ?, 2, TRUE, TRUE)`,
+      `INSERT INTO usuarios (correo, contrasena, rol, verificado, activo, debe_cambiar_password) VALUES (?, ?, 2, TRUE, TRUE, TRUE)`,
       [correoInstitucional, "temporal"],
     );
     const idNuevoUsuario = userResult.insertId;
@@ -67,8 +69,8 @@ export const registrarDoctor = async (req, res) => {
     const [docResult] = await connection.query(
       `INSERT INTO doctores 
             (id_usuario, nombres, apellido_paterno, apellido_materno, fecha_nacimiento, sexo, curp, telefono, correo_personal,
-             cedula, horario, calle, colonia, codigo_postal, ciudad, estado) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             cedula, calle, colonia, codigo_postal, ciudad, estado) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         idNuevoUsuario,
         nombres,
@@ -80,7 +82,6 @@ export const registrarDoctor = async (req, res) => {
         telefono,
         correo_personal,
         cedula,
-        horario,
         calle,
         colonia,
         codigo_postal,

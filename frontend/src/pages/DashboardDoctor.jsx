@@ -38,6 +38,7 @@ const DashboardDoctor = () => {
 
   const [nombreDoctor, setNombreDoctor] = useState("");
   const [cargandoPerfil, setCargandoPerfil] = useState(true);
+  const [citasHoy, setCitasHoy] = useState(0);
 
   // --- ESTADOS DE SEGURIDAD (PRIMER LOGIN) ---
   const [modalSeguridad, setModalSeguridad] = useState(false);
@@ -132,9 +133,35 @@ const DashboardDoctor = () => {
             limpiarTemporizador();
           }
         }
+
+        const resCitas = await clienteAxios.get(
+          "/doctores/citas-programadas",
+          config,
+        );
+        if (resCitas.data) {
+          // Forma 100% segura de armar YYYY-MM-DD en hora local (sin usar ISOString)
+          const hoy = new Date();
+          const año = hoy.getFullYear();
+          const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+          const dia = String(hoy.getDate()).padStart(2, "0");
+          const hoyLocalStr = `${año}-${mes}-${dia}`;
+
+          // DEPURACIÓN: Esto te dirá exactamente por qué no coincidían
+          console.log("Fecha de hoy (Calculada en React):", hoyLocalStr);
+
+          const citasDeHoy = resCitas.data.filter((cita) => {
+            // Limpiamos la fecha de la BD por si trae basura extra de la zona horaria (ej. T00:00:00.000Z)
+            const fechaLimpiaDB = cita.fecha.split("T")[0];
+            console.log(`Comparando: ${fechaLimpiaDB} === ${hoyLocalStr}`);
+
+            return fechaLimpiaDB === hoyLocalStr;
+          });
+
+          setCitasHoy(citasDeHoy.length);
+        }
       } catch (error) {
         console.error(error);
-        handleLogout();
+        //handleLogout();
       } finally {
         setCargandoPerfil(false);
       }
@@ -313,7 +340,11 @@ const DashboardDoctor = () => {
           </Box>
           <CardContent sx={{ p: 4, textAlign: "center" }}>
             <Typography variant="h3" fontWeight="bold" color="#134E4A" mb={1}>
-              0
+              {cargandoPerfil ? (
+                <Skeleton width={50} sx={{ mx: "auto" }} />
+              ) : (
+                citasHoy
+              )}
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Citas programadas para el día de hoy.
