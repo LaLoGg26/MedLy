@@ -9,6 +9,8 @@ import {
   obtenerDirectorioPacientes,
   obtenerExpedienteBase,
   guardarExpedienteBase,
+  guardarConsultaActual,
+  emitirReceta,
 } from "../controllers/doctorController.js";
 
 const router = express.Router();
@@ -24,5 +26,7 @@ router.get("/citas-programadas", verificarToken, obtenerCitasProgramadas);
 router.get("/pacientes", verificarToken, obtenerDirectorioPacientes);
 router.get("/expediente/:id_paciente", verificarToken, obtenerExpedienteBase);
 router.post("/expediente", verificarToken, guardarExpedienteBase);
+router.post("/consulta-actual", verificarToken, guardarConsultaActual);
+router.post("/emitir-receta", verificarToken, emitirReceta);
 
 export default router;

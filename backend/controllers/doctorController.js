@@ -304,3 +304,130 @@ export const guardarExpedienteBase = async (req, res) => {
       .json({ mensaje: "Error al guardar el expediente base del paciente." });
   }
 };
+
+export const guardarConsultaActual = async (req, res) => {
+  try {
+    const {
+      id_cita,
+      peso,
+      talla,
+      temperatura,
+      presion_arterial,
+      frecuencia_cardiaca,
+      frecuencia_respiratoria,
+      saturacion_oxigeno,
+      motivo_consulta,
+      exploracion_fisica,
+      diagnostico,
+      notas_adicionales,
+    } = req.body;
+
+    // Usamos ON DUPLICATE KEY UPDATE por si el doctor retrocede y avanza en el Wizard
+    const query = `
+      INSERT INTO consultas 
+      (id_cita, peso, talla, temperatura, presion_arterial, frecuencia_cardiaca, frecuencia_respiratoria, saturacion_oxigeno, motivo_consulta, exploracion_fisica, diagnostico, notas_adicionales) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+      peso = VALUES(peso), talla = VALUES(talla), temperatura = VALUES(temperatura),
+      presion_arterial = VALUES(presion_arterial), frecuencia_cardiaca = VALUES(frecuencia_cardiaca),
+      frecuencia_respiratoria = VALUES(frecuencia_respiratoria), saturacion_oxigeno = VALUES(saturacion_oxigeno),
+      motivo_consulta = VALUES(motivo_consulta), exploracion_fisica = VALUES(exploracion_fisica),
+      diagnostico = VALUES(diagnostico), notas_adicionales = VALUES(notas_adicionales)
+    `;
+
+    await pool.query(query, [
+      id_cita,
+      peso || null,
+      talla || null,
+      temperatura || null,
+      presion_arterial || null,
+      frecuencia_cardiaca || null,
+      frecuencia_respiratoria || null,
+      saturacion_oxigeno || null,
+      motivo_consulta,
+      exploracion_fisica,
+      diagnostico,
+      notas_adicionales,
+    ]);
+
+    res
+      .status(200)
+      .json({ mensaje: "Datos de la consulta guardados correctamente." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: "Error al guardar la consulta médica." });
+  }
+};
+
+export const emitirReceta = async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    const { id_cita, indicaciones_generales, medicamentos } = req.body;
+
+    // 1. Obtener el id_consulta ligado a esta cita
+    const [consultaRows] = await connection.query(
+      `SELECT id_consulta FROM consultas WHERE id_cita = ?`,
+      [id_cita],
+    );
+
+    if (consultaRows.length === 0) {
+      throw new Error("No se encontró una consulta activa para esta cita.");
+    }
+    const idConsulta = consultaRows[0].id_consulta;
+
+    // 2. Generar la Receta
+    // Creamos un folio único basado en el tiempo y el ID
+    const folioReceta = `REC-${Date.now().toString().slice(-6)}-${idConsulta}`;
+
+    const [recetaResult] = await connection.query(
+      `INSERT INTO recetas (id_consulta, folio_receta, indicaciones_generales) VALUES (?, ?, ?)`,
+      [idConsulta, folioReceta, indicaciones_generales || ""],
+    );
+    const idReceta = recetaResult.insertId;
+
+    // 3. Insertar los medicamentos (si el doctor recetó algo)
+    if (medicamentos && medicamentos.length > 0) {
+      for (const med of medicamentos) {
+        // Solo guardamos si al menos escribió el nombre del medicamento
+        if (med.medicamento) {
+          await connection.query(
+            `INSERT INTO detalles_receta (id_receta, medicamento, dosis, frecuencia, duracion, notas_medicamento) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              idReceta,
+              med.medicamento,
+              med.dosis,
+              med.frecuencia,
+              med.duracion,
+              med.notas_medicamento || "",
+            ],
+          );
+        }
+      }
+    }
+
+    // 4. Marcar la cita original como 'completada'
+    await connection.query(
+      `UPDATE citas SET estado = 'completada' WHERE id_cita = ?`,
+      [id_cita],
+    );
+
+    await connection.commit();
+    res
+      .status(200)
+      .json({
+        mensaje: "Consulta finalizada y receta emitida con éxito.",
+        folio: folioReceta,
+      });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res
+      .status(500)
+      .json({ mensaje: error.message || "Error al emitir la receta." });
+  } finally {
+    connection.release();
+  }
+};
